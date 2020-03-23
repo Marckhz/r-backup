@@ -1,0 +1,293 @@
+---
+title: "Modeling and prediction for movies"
+output:
+  pdf_document: default
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(GGally)
+library(gridExtra)
+library(cowplot)
+```
+
+### Load data
+
+```{r load-data}
+load("movies.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+Data was taken randomly sample from movies produced and released before 2016.
+
+* * *
+
+## Part 2: Research question
+
+What are the minimum characteristics a movie should have to get a decent rating score?
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+
+There are different kinds of movie genres, but, do they have something in common? Certeanly there is.
+How can we build a winning formula to asses such goal. Let's find out with this Dataset sampled from Rotten Tomatoes and IMBD.
+
+
+First, let's check the Dataset structure. We can visualize this with RStudio Viewer, but we can also accomplish this with Code.
+
+```{r names-dataset}
+names(movies)
+```
+Above command, show the column names, this is useful when do have access to a  CodeBook.
+
+Let's moving checking the structure of the Dataset.
+
+```{r struct-dataset}
+str(movies)
+```
+That was the Data type of the Dataset.
+
+
+Moving Forward, Let's check how this dataset Classifies the movies as good, indiferent or bad. Let's Rembember, the sample comes from two different Web Sites. Rotten Tomatoes and IMDb.
+
+* critics_rating : Categorical variable for critics rating on Rotten Tomatoes (Certified Fresh, Fresh, Rotten)
+* critics_score : Critics score on Rotten Tomatoes
+* imdb_rating :  Rating on IMDB
+* imdb_num_votes : Number of votes on IMDB
+
+So let's inspect them. I'll add the title variable. To get a bigger picture. 
+
+```{r  inspect-ratings}
+movies %>% select(title, critics_rating, critics_score, imdb_rating, imdb_num_votes) %>% head(5)
+```
+
+There it is, the first five rows of the selection. 
+
+But according to the 
+
+as well, there is a runtime variable, which has the duration length of a movie. Let's do a summary of this variable.
+
+```{r summary-movies }
+movies %>% select(runtime) %>% summary(runtime)
+```
+
+The minimum a movie lasted is 39 minutes, maximum 267 minutes, on average a movie last 105 minutes.
+
+However, before deciding this mean is truthful, let's plot the data. Remember, when working with the mean, is a good practice to plot the data to verify for outliers, mean is really sensitive to the outliers, therefore sometimes is not a good option  as a central tendancy  measure.
+
+
+```{r plot-runtime }
+ggplot(data = movies, aes(x = runtime)) + geom_histogram(binwidth = 5)
+
+```
+
+Viewing the plot, it shows there are a few outliers  and skweness to the right. 
+
+```{r box-plot}
+ggplot(data = movies, aes(x= "movies", y  = runtime)) + geom_boxplot()
+``` 
+
+In the boxplot we easily can observe the are some outliers. So, the meean will be not a  good central tendency pick. However, this is for the whole sample. Let's actually build for good movies and bad movies in relation with the scores from Rotten Tomatoes and IMBd.
+
+## Rotten Tomatoes Plots
+
+Let's build indivual plots for each classification, to visualize how the data is distributed. Let's stard building histograms of the Rotten Tomatoes.
+
+First, let's show a summary of the statitics. 
+
+```{r sum-rotten}
+na.omit(movies) %>% group_by(critics_rating) %>% summarise(runtime_mean = mean(runtime), runtime_median = median(runtime))
+```
+
+
+```{r tom-hist}
+g1 <- na.omit(movies) %>% filter(critics_rating == "Certified Fresh")  %>% ggplot(aes(x = runtime)) + geom_histogram( binwidth = 5) + geom_vline(aes(xintercept= mean(runtime), color="mean" ), linetype="dashed") + geom_vline(aes(xintercept=median(runtime),color="median" ) , linetype="dashed")  + scale_colour_manual(name="statistics", values = c(mean="red", median="green") ) + labs(title= "Certified Fresh") + theme(plot.title = element_text(hjust = 0.5) )
+
+g2 <- na.omit(movies) %>% filter(critics_rating == "Fresh")  %>% ggplot(aes(x = runtime)) + geom_histogram( binwidth = 5) + geom_vline(aes(xintercept= mean(runtime), color="mean"), linetype="dashed") + geom_vline(aes(xintercept=median(runtime), color="median"), linetype="dashed") + scale_colour_manual(name="statistics", values=c(mean="red", median="green")) +  labs(title= "Fresh") + theme(plot.title = element_text(hjust = 0.5)) 
+
+g3 <- na.omit(movies) %>% filter(critics_rating == "Rotten")  %>% ggplot(aes(x = runtime)) + geom_histogram( binwidth = 5) + labs(title= "Rotten")  + geom_vline(aes(xintercept= mean(runtime), color="mean" ), linetype="dashed") + geom_vline(aes(xintercept=median(runtime),color="median" ) , linetype="dashed")  + scale_colour_manual(name="statistics", values = c(mean="red", median="green") ) + theme(plot.title = element_text(hjust = 0.5) )
+
+
+plot_grid(g1,g2,g3)
+```
+
+We can observe a Rigth Skewness of each plot. It seems there are some  oultliers. Let's visualize this in a boxplot and because the data is rigth skwed.
+
+
+```{r box-tom}
+movies %>% ggplot(aes(x = critics_rating, y  = runtime)) + geom_boxplot()
+```
+
+There it is. Apperently, the  mean stay around the 100 minutes, but still, there are obvious outliers.  We will deal this later.
+
+Moving on let's plot the IMBd. 
+
+## IMBd Plot.
+
+Unlike Rotten Tomatoes data, with IMBd we are dealing with numerical values, therefore we need a different kind of plot.
+```{r imbd-rate}
+ movies %>% select(runtime, imdb_rating) %>% ggplot(aes( x= imdb_rating, y = runtime)) + geom_jitter() + geom_hline(yintercept = 105.8, color="red")
+```
+
+Average movie length is 105, and we plot a horizontal line to cut the data and see how density is the data around that line, we can observe the most data in the rating from 6 to 8.
+
+Alrigth, but we don't like outliers we need a more robust tool, let's pick up the median as our central tendency tool.
+
+Let's inspect  the movies popularity by  Date.
+```{r sum-scoresCrit}
+sum_scores_crit <- movies %>% group_by(thtr_rel_month) %>% summarise(mean_critics_score = mean(critics_score), median_critics_score = median(critics_score))
+```
+
+
+```{r by-date}
+ggplot(data= sum_scores_crit, aes(x= thtr_rel_month, y = mean_critics_score )) + geom_point(size=5) + scale_x_continuous(breaks = c(1:12)) + xlab("month") + ylab("average score") + labs(title="Average Score per month") +  theme(plot.title = element_text(hjust = 0.5))
+```
+
+It seems movies released in december tend to score better, because their average score is greather than the others. But these are the critics opinions. Does the audience thinks the same?
+
+```{r aud-score}
+aud_score <- movies %>% group_by(thtr_rel_month) %>% summarise(mean_audience = mean(audience_score))
+g5<-ggplot(data= sum_scores_crit, aes(x= thtr_rel_month, y = mean_critics_score )) + geom_point(size=5) + scale_x_continuous(breaks = c(1:12)) + scale_y_continuous(breaks = c(50:80)) + xlab("month") + ylab("average score") + labs(title="Average Score per month") +  theme(plot.title = element_text(hjust = 0.5))
+g5 + geom_point( y = aud_score$mean_audience, size = 5, color="blue") + scale_y_continuous(breaks = c(54:70))
+
+```
+
+it Seems audience tends to be nicer when critizing, because they give higher score, but still, movies released in december gets the highest score.  Following table tell us that
+
+```{r aud-scortbl}
+aud_score
+```
+
+Now let's inspect the movies score by genre and critics score average.
+
+```{r critcs-avgBox}
+na.omit(movies) %>% ggplot(aes(x = genre, y = critics_score)) + geom_boxplot() + theme(axis.text.x = element_text(angle= 90, vjust=0.5))
+```
+
+These box plots shows the average scores in relation with their genre, anything above 50 is good critic. We can observe the average and the  data where is placed. 
+
+Now let's find out if the number of votes in IMDb relates to the critics rating. 
+
+```{r critics-rating}
+ggplot(data = movies, aes(x = critics_rating, y = imdb_num_votes/1000, fill = critics_rating ) ) + geom_bar( stat = "identity")+ labs(title = "Relationship Rotten Tomatoes and IMDb votes") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+Certified Fresh has the highst amount of votes, seems they do tend to be same in the different websites. 
+
+
+* * *
+
+## Part 4: Modeling
+
+Now, let's build a linear model to predict a critics_score. Let's use the following variables. 
+
+* genre
+* critics_rating
+* thtr_rel_month
+* runtime
+* imdb_num_votes
+
+And i'll choose to follow the backwards methodology on picking the most powerful and simplest one by dropping variables in relation with their P value.
+
+```{r lm-movies}
+movies_model <-  lm(critics_score ~  genre + critics_rating +  thtr_rel_month + runtime + imdb_num_votes, data = movies)
+summary(movies_model)
+```
+
+Let's drop the variables with the highest P-value and start moving backwards, keep in mind we are looking in reducing the R-squared coefficient, which is the measure on how well the model does. 
+
+In this the variable thtr_rel_month has the hightest P-value. The model, just score a R-squared of 0.7923, let's drop this thtr_rel_month variable to see if we increase the R-squared value.
+
+```{r lm-movies2}
+movies_model_2 <- lm(critics_score ~  genre + critics_rating  + runtime + imdb_num_votes, data = movies)
+summary(movies_model_2)
+```
+
+The R-squared Value just incread a few points, which is good, as long the R-squared model keeps increasing it is fine to move foward and drop variables, next let's keep dropping variables, but before, you may be asking youself why don't we drop genre variable, it is obvious its P-Value it is not significant, but the reason we are not dropping the genre variable is beacause it is a variable with many levels we need to handle this one as a whole individual and because at least 1 level of this variable has a significant P-value we cannot drop it. Therefore our next move will be dropping the IMDb number of votes variable and let's see if the R-squared valeu changes.
+
+```{r lm-movies3}
+movies_model_3 <- lm(critics_score ~  genre + critics_rating  + runtime, data = movies)
+summary(movies_model_3)
+```
+
+The R-squared Value hast just increased a few points, that is good. Now we don't anymore variables to drop, so let's keep this model and test it. 
+
+Just as any model, let's make a diagnoistic of the model. First we will check the linearity condition among our model variables, notice the only numerical variable we have in the model is the runtime variable.
+
+
+## Random Scatter around 0
+
+```{r linear-rel}
+residuals <- c(movies_model_3$residuals, 0)
+plot(residuals ~ movies$runtime)
+```
+We want our random scatter around 0.  I think this is fairly ok.
+
+## Nearly normal residuals with mean 0
+
+```{r hist-res}
+hist(movies_model_3$residuals)
+```
+
+It seems it resembles a normal distribution. As well, let's build a normal probability plot.
+
+```{r normal-pp}
+qqnorm(movies_model_3$residuals)
+qqline(movies_model_3$residuals)
+```
+
+It follows a little S shaped, however, there's not much variability but in the tails.  This is fairly satisfied
+
+
+## Constant variability of residuals.
+```{r const-var}
+plot(abs(movies_model_3$residuals) ~ movies_model_3$fitted)
+```
+
+This plot s
+
+It shows any pattern in the residual plots. 
+eems a little bit of strange, spite of that there's no fan shape or anything like, let's check if there's a pattern among the residuals.
+
+```{r pattern-like}
+plot(movies_model_3$residuals)
+```
+* * *
+
+## Part 5: Prediction
+
+let's prredict DATA!.
+
+```{r predict-data}
+y_test <- data.frame(genre = "Documentary", critics_rating = "Fresh", runtime = 105)
+predict(movies_model_3, y_test, interlval="prediction", level = 0.05)
+```
+
+With this we are predicting that a movie of genre Documentary, critics_rating  Fresh and runtime 105, will score from 85 to 87 points interval, this means, according to Rotten Tomatoes a Certified Fresh label.
+
+
+* * *
+
+## Part 6: Conclusion
+
+Building a model to get  a formula about what are the minimum characteristics these websites consider a good movie is not that easy, because spite of having the ratings, genre, actors and so on, there are other variables that comes to play such as personal taste, mood of the critic, personal issues againts actors or just simple, movie was great but critics dislike them.
+
+
+This is educative purpouse only, do not tend to be a model for production or anything take it as step tutorial on building a multiple linear regression model. 

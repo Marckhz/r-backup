@@ -1,0 +1,1 @@
+"0","sub_df %>% select(""Calle"", ""Lesionados"", ""Muertos"", ""Causa"") %>% filter(Lesionados %notin% c(""No"") | Muertos %notin% c(""No""))"

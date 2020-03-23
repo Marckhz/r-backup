@@ -1,0 +1,81 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+# Let's analyse divisas Dataset, let's do something interesting with. 
+
+i'd like to focus on Mexico, and see whats going on with the peso over time.
+Let's get in context,  everything is in dollars. Let's do funny stuff with it
+
+First let's check our Dataset what does it have inside, what colums are we dealing with
+As usual we will load everything needed for it, all the libraries and stuff.
+```{r beg-data}
+library(ggplot2)
+library(dplyr)
+```
+
+Now let's load the data, depending wherever you are working in your system path, you may need to change it, i am inside a working directory for this project so i have not set R as global, we can set working dir with the following command
+
+```{r set-wkdir}
+my_dir <- "/home/marck/R_coursera/Pp/"
+setwd(dir = my_dir)
+```
+
+Therefore now  i can have access to the files that are in R_Courser/Pp. What happened? we just had set a new variable my_dir to store the string path and put it in setwd() function, which, moves our current workspace  to the desired directory.
+
+Now we can load the data.
+
+```{r load-csv}
+divisas <- read.csv("daily_csv.csv")
+```
+Depending how you named the data you might need to change the name of the file into the variable. We just created a new variable named divisas where we just situated the divisas csv file.
+
+Now, let's check the columns of this csv. There are two ways, the slow way or the fast way, i mean slow because when you click in the Data Window  in the right( my case)  it may load all the data, however it will display everything in the dataset as DataFrame so you can visualize it. Spite of that sounding attractive, let's R do it and create a more secure way, i mean secury because we will also like to know that type of data we are dealing with. 
+
+```{r  csv-desc}
+str(divisas)
+```
+
+Unlike other languages like Python, str() is a function that returns the structure of the Dataset, this includes, the column names, type of the data each column has and so on.
+
+It seems there are 3 columns, Date, Country, Value. There are 226533 observations. There are 2 factors, Date with 12240 levels, which means, there are that number of different values inside and Country with 22 levels, which, means there are in this case 22 Countries.
+
+Let's visualize which countries this dataset includes.
+
+```{r show-countries}
+divisas %>% distinct(Country)
+```
+
+Let's work with Venezuela, Mexico and Brazil and dates that cover 2016 and beyond. Before this we need to know what's the max Date in this dataset.
+
+```{r check-date}
+divisas %>% select(Date) %>%  arrange(desc(Date)) %>% head(5)
+```
+
+There we have the top 5 rows. 
+
+```{r filter-countryDates}
+
+divisas_latin <- divisas %>% filter(as.Date(Date, "%Y-%m-%d") >= as.Date("2016-01-01"), Country == c("Mexico", "Venzuela","Brazil") )
+
+```
+Let's plot Mexico.
+
+```{r plot-Mexico}
+divisas_latin %>% filter(Country == "Mexico") %>% ggplot(aes(x = Date, value, group = 1)) + geom_line()
+```
+
+it seems we have missing value let's actually clean our latin dataset.
+```{r clean-dataset}
+divisas_latin <- na.omit(divisas_latin)
+```
+good, now let's combine our plots the actually have a better visaulization.
+
+
+
+

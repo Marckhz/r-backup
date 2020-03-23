@@ -1,0 +1,27 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1582651117408.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2459848058",
+    "id" : "1CC8B12D",
+    "lastKnownWriteTime" : 1582661873,
+    "last_content_update" : 1582661873398,
+    "path" : "~/R_coursera/helicon/helicon_notebook.Rmd",
+    "project_path" : "helicon_notebook.Rmd",
+    "properties" : {
+        "chunk_output_type" : "inline",
+        "cursorPosition" : "69,0",
+        "scrollLine" : "51",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

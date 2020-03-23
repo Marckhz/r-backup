@@ -1,0 +1,87 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+```{r load-lib}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+
+```{r path-dir }
+path = "/home/marck/R_coursera/Eje_coppel/"
+setwd(dir = path)
+```
+
+```{r load-csv}
+pib_df <- read.csv("eda2.csv")
+head(pib_df)
+```
+vamos a construir  un EDA en este dataset del pib. se nos presenta un archivo excel.
+Que queremos explorar? vamos a explorar de acuerdo a las actividades primarias, secundarias y terciarias.
+
+Primero vamos a graficar por estado de acuerdo a las actividades primarias de cada uno. Trabajermos Solo con Sinaloa.
+
+```{r filter_df}
+primary_labor <- pib_df %>% filter(X == "Actividades primarias")
+head(primary_labor)
+labor_3_16 <- primary_labor %>% select(X.1, X.3, X.16)
+labor_3_16 %>% summarise(mean__2003 = mean(as.numeric( (X.3) ) ), mean_2016 = mean( as.numeric(X.16) ) )
+```
+
+```{r more-prod}
+labor_3_16 %>% arrange(desc(X.3, X.16)) %>% head(5)
+```
+Se muestran los primeros 5  mas altos. 
+
+```{r rename-col}
+labor_3_16 <- labor_3_16 %>%  rename("state" = X.1, "2003" =  X.3, "2016" = X.16)
+```
+
+```{r plot-2003}
+na.omit(labor_3_16) %>%  ggplot(aes(x = state, y = labor_3_16$`2003`)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+```{r plot-2006}
+na.omit(labor_3_16) %>%  ggplot(aes(x = state, y = labor_3_16$`2003`)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+```{r sec-fac}
+secundary_labor <- pib_df %>% filter(X == "Actividades secundarias")
+sinaloa_on_time <- secundary_labor[26,]
+```
+
+```{r sinaloa-plot}
+
+sinaloa_on_time  <- sinaloa_on_time  %>% select(X.4, X.6, X.8, X.12, X.16)
+
+reshape_years <-  gather(sinaloa_on_time)
+ggplot(data = reshape_years,  (aes(x = key, y = value))) + geom_bar(stat  = "identity")
+
+```
+El grafico de sinaloa muestra, que en el 2016, fue el mejor. Solamente de estos 4.
+
+```{r most total}
+secundary_labor %>% select(X.1, X.3) %>% arrange(desc(X.3))  %>% head(5)
+```
+En el 2003, el de mayor fue campeche
+
+veamos la nacion
+
+```{r nation }
+nation <- pib_df[2,]
+nation <- gather(nation)
+temp <- c(1,2,3)
+nation <- nation[-temp,]
+new_temp <- seq(2003,2016)
+nation <- mutate(nation, new_temp)
+nation
+
+```
+

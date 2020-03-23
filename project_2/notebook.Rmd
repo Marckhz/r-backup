@@ -1,0 +1,144 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+### Load data
+
+
+```{r load-data}
+load("gss.Rdata")
+```
+
+* * *
+
+## Part 1: Data
+
+Let's work with the data from "General Social Survey Cumulative File, 1972-2012"
+
+We'll work with conservatives and liberals. Political opinions aside, this is mainly a research focus area. However in my personal opinion is not at good generalizing someone as liberal or conservative. This survey for simplicity manages these categories, however, there are many more. 
+
+In the scale this survey manage we have a rank of moderate. Mooderate people are neither on any side, but, because i cannot classiy them i will split the number in half and share among the two other categories. 
+
+
+* * *
+
+## Part 2: Research question
+
+Is there a relationship between being liberal, Conservative or Moderate in Foreign Opinion?
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+To answer this question we don't need to do an EDA. The answer will be "it depends", spite of that, we will work with the amount of data we have to study our sample and check whatever their opinion it is.
+
+Let's preprate everything.
+
+```{r poli-pref }
+politica_pref <- gss %>% select(polviews) %>% na.omit(polviews)
+```
+we just created a new variable that contains al the data of the colum that refers to political views and also cleaned the "NA" values. 
+I'd like to simplify this by creating a new Dataframe from this that holds the categories of political views.
+
+
+Next, Because we have many categories, i will just simplify them in two. Let's do it.
+
+first, let's create vector to holds the strings "Conservative", "Extrmly Conservative", " Slightly Conservative"
+
+``` {r  vec-labels}
+tmp <- c("Conservative", "Extrmly Conservative", "Slightly Conservative")
+
+```
+Alrigth, with this now we can use it to create a new vector, that later we can use it as an auxliar to create a new variable in our dataframe that can holds the values either Liberal or Conservative. However there's a problem, still exist observations that are labeled as "Moderate" as i mentioned before they stand in the middle, so let's put them aside. 
+
+Let's Create a new DataFrame that only contains the Conservative and Liberals.
+
+``` {r filter-liberalConn}
+con_lib_df <- gss %>% select(polviews, nataid) %>%  na.omit(polviews, nataid) %>% filter(polviews != "Moderate") %>% mutate(poli_cat = ifelse(polviews %in% tmp, "Conservative", "Liberal") ) %>% select(poli_cat, nataid)
+```
+
+Now let's a create a new DataFrame that contains only the Moderate guys.
+
+``` {r filter-moderates}
+moderate_df <- gss %>% select(polviews, nataid) %>% na.omit(polviews, nataid) %>% filter(polviews == "Moderate") 
+```
+
+Now let's visualize their opinion on Foreign Aid.
+
+
+``` {r wrang-df} 
+
+con_lib_tbl <- table(con_lib_df$poli_cat, con_lib_df$nataid)
+tmp2 <- as.data.frame(con_lib_tbl) %>% rename(polviews = Var1, opinion=Var2)
+
+mod_tbl <- table(moderate_df)
+x <- as.data.frame(mod_tbl) %>% filter(polviews == "Moderate") 
+x <- x %>% rename(opinion = nataid)
+final_df <- rbind(x, tmp2)
+g <- ggplot(data= final_df, aes(fill=polviews, x = reorder(opinion, -Freq), y=Freq, label=Freq)) + geom_bar(stat="identity", position = "dodge") + geom_text(size=4, position = position_dodge(width = 1 ) ) + labs(title="Opinion on Foreign Aid", x="opinion leves") + theme(plot.title = element_text(hjust= 0.5))
+g
+```
+
+Now we can visualize the opinion on Foreign Aid of the three political categories we have. It seems that Moderate people think goverment is speding too much money, however it seems this is the popular opinion. 
+* * *
+
+## Part 4: Inference
+
+As usual, we start with the Hypotheses statement. 
+
+Ho (nothing going on): Political view and Foreign aid opinion are independent. 
+
+Ha (something going on) : Poltical view and Foreign aid opinion are dependent. 
+
+
+Let's use the chi-square test of independence.
+
+$$ x^2  =  \sum_{i=1}^k \frac{(O-E)^2}{E} $$
+$$ df =  (R -1 ) ( C-1)$$
+
+``` {r calc-chi}
+great_total <- sum(final_df$Freq)
+
+conservative_ratio <- final_df %>% filter(polviews == "Conservative") %>% summarise(conservative_ratio =sum(Freq)/great_total)
+
+expected_con <- final_df %>% filter(polviews == "Conservative") %>% mutate(expected_con = Freq * conservative_ratio$conservative_ratio)
+
+liberal_ratio <- final_df %>% filter(polviews =="Liberal") %>% summarise(liberal_ratio  = sum(Freq)/ great_total) 
+
+expected_liberal <- final_df %>% filter(polviews=="Liberal") %>% mutate(expected_liberal = Freq * liberal_ratio$liberal_ratio)
+
+moderate_ratio <- final_df %>% filter(polviews == "Moderate") %>% summarise(moderate_ratio = sum(Freq) / great_total)
+
+expected_moderate <- final_df %>% filter(polviews=="Moderate") %>% mutate(expected_moderate = Freq * moderate_ratio$moderate_ratio)
+
+x_square_conser <- expected_con %>% summarise(as_chi =  sum(((Freq - expected_con)**2)/expected_con ))
+x_square_liberal <- expected_liberal %>% summarise(as_chi = sum(( (Freq - expected_liberal)**2)/expected_liberal))
+x_square_moderate <- expected_moderate %>% summarise(as_chi = sum( ((Freq - expected_moderate )**2)/expected_moderate ))
+
+grand_chi_square <- (x_square_conser + x_square_liberal + x_square_moderate) / 1000
+
+degrees_of_freedom <- (9-1) * (3-1)
+chisquare <- pchisq(grand_chi_square$as_chi, degrees_of_freedom, lower.tail = FALSE)
+chisquare
+
+
+```
+
+We filter the data by polviews and apply the related operations into the dataset. Finally we get the p-value.
+
+We get a really small p-value. so this means political preference is independent? The answer i will say no. Spite of the small P-value there are other factors that may affect, however in this obeservational study we can say YES.

@@ -1,0 +1,151 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+```{r load-data}
+load("brfss2013.RData")
+```
+* * *
+
+## Part 1: Data
+This Sample of data is retrieved using a special Questionnaire made by  BRFSS.
+The BRFSS questionnaire consists of a core component and optional modules. Many questions are taken from established national surveys, such as the National Health Interview Survey or the National Health and Nutrition Examination Survey.
+
+### 1.1 Sample Description
+In a telephone survey such as the BRFSS, a sample record is one telephone number in the list of all telephone numbers the system randomly selects for dialing. 
+
+BRFSS divides telephone numbers into two groups, or strata, which are sampled separately.
+
+The target population for cellular telephone samples in 2013 consists of persons residing in a private residence or college housing, who have a working cellular telephone, are aged 18 and older, and received 90 percent or more of their calls on cellular telephones.
+
+
+* * *
+
+## Part 2: Research questions
+
+I'd like to work in the economic-social context. 
+Therefore we will be using the Module 19 which refers to Social Context. 
+Section 8 which relates to Demographics.
+
+**Research quesion 1:**
+Do Male makes more money than Females?
+
+**Research quesion 2:**
+Which Income Range tends to drink more on average? 
+
+**Research quesion 3:**
+Over all Females drink more alcohol than Males? 
+* * *
+
+## Part 3: Exploratory data analysis
+
+NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
+button (green button with orange arrow) above. Make sure that your code is visible
+in the project you submit. Delete this note when before you submit your work.
+
+**Research quesion 1:**
+Because we have a huge data set and for just academic purpouse we will work with the State of California
+Let's same each category of female and Male in different variables
+```{r save-categories}
+California <- filter(brfss2013, X_state=="California")
+cali_males <- filter(California, sex=="Male")
+cali_females <- filter(California, sex == "Female")
+```
+
+Let's check our proportion of Male and Females  of this sub sample
+```{r table-sex}
+length(cali_males$sex) / length(California$sex)
+length(cali_females$sex) / length(California$sex)
+```
+Let's plot the ranges of income in the male sample
+Before let's manipulate a little bit the data i already played with the dataset a bit and found there are some missing values. Missing values are really annoying because they make or EDA too complex when applying functions and so on. 
+
+My approach is, from the cali_males dataset, i will create a new dataset with just the income2 variable with clean values, so i can keep working from there. We can use mutate to keep adding more variables. 
+
+```{r new-df}
+income_df_males <- as.data.frame(table(cali_males$income2)) %>% rename(Range = Var1)
+income_df_females <- as.data.frame(table(cali_females$income2)) %>% rename(Range = Var1)
+```
+now let's plot this
+```{r income-male}
+ggplot(data = income_df_males, aes(x=Range, y=Freq )) + geom_col(fill="blue") + labs(title="Income Males", x="Income Range", y="Freq") + theme(plot.title = element_text(hjust = 0.5), axis.text = element_text(size=7) ) 
+```
+
+Now let's check for females
+
+```{r female-bars}
+ggplot(data = income_df_females, aes(x=Range, y=Freq )) + geom_col(fill="Pink") + labs(title="Income Females", x="Income Range", y="Freq") + theme(plot.title = element_text(hjust = 0.5), axis.text = element_text(size=7))  
+```
+
+now let's do a scatter plot to compare.
+Blue dots are Male. Pink dots are Female.
+```{r scatter-malevsfemale}
+ggplot(data = income_df_males, aes(x=Range, y=Freq)) +  geom_point(color="blue", size=5) + geom_point(data=income_df_females, color="pink", size=5) + labs(title="Male vs Female Income", x="Income Range", y="Freq") + theme(plot.title = element_text(hjust = 0.5), axis.text = element_text(size=7))
+```
+
+it Seems Females tend to better in california.
+
+**Research quesion 2:**
+Moving on Question #2.
+
+We have so many missing values, i propose, let's use dplyr and do small dataframe and save it for later to plot it. We will do this for Females and Males
+```{r drinks-males}
+drink_males_income <- cali_males %>% select(income2, avedrnk2) %>% na.omit(income2, avedrnk2) %>% group_by(income_cat = income2) %>% summarise(mean_drinks= mean(avedrnk2)) %>% arrange(desc(mean_drinks))
+drink_males_income
+```
+
+It seems on males that earn between $25,000 and $35,000 tend to drink more. 
+
+Let's plot this.
+```{r male-drinks-plot}
+g_males <- ggplot(data=drink_males_income, aes(x=income_cat,y=mean_drinks, group="Males")) + geom_point() + geom_line()
+g_males
+```
+
+
+Now let's do it for Female
+```{r drinks-females}
+drink_female_income <- cali_females %>% select(income2, avedrnk2) %>% na.omit(income2, avedrnk2) %>% group_by(income_cat=income2) %>% summarise(mean_drinks = mean(avedrnk2)) %>% arrange(desc(mean_drinks))
+drink_female_income
+```
+Female that makes less than $10,000 are more prone to drink more.
+
+let's plot this
+
+```{r female-plot}
+g_females<-ggplot(data=drink_female_income, aes(x=income_cat, y=mean_drinks, group="Females")) + geom_point() + geom_line()
+g_females
+```
+
+**Research quesion 3:**
+
+```{r df-drinkers}
+drinks_males_avg <- cali_males %>% select(avedrnk2) %>% na.omit(avedrnk2) %>% summarise(mean_drinks = mean(avedrnk2), sd_drinks=sd(avedrnk2) )
+drinks_females_avg <- cali_females %>% select(avedrnk2) %>% na.omit(avedrnk2) %>% summarise(mean_dd = mean(avedrnk2), sd_females=sd(avedrnk2))
+
+
+df_drinks<-data.frame(gender=c("Female","Male"),mean=c(drinks_females_avg$mean_dd, drinks_males_avg$mean_drinks))
+df_drinks
+```
+
+```{r plot-drinkers}
+ggplot(data=df_drinks, aes(x=gender,y=mean, fill=gender, label=mean) ) + geom_col() + geom_text(size=4, position=position_stack(vjust = 0.5))
+```
+
+We can see that man on average drink more.

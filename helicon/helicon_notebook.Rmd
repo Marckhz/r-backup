@@ -1,0 +1,72 @@
+---
+title: "R Notebook"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r libraries}
+library(ggplot2)
+library(dplyr)
+library(shiny)
+library(statsr)
+```
+
+```{r load-data}
+dataframe <- read.csv("data.csv")
+```
+```{r head}
+head(dataframe)
+
+```
+```{r names}
+colnames(dataframe)
+```
+
+```{r omit-nacolumns}
+sub_df <- dataframe %>% select_if(~ !any(is.na(.)))
+sub_df
+```
+
+
+## 1. ¿Qué calles "parecen ser" las 10 calles más peligrosas del área metropolitana de Monterrey?
+
+Primero que nada que es peligro?
+
+El conjunto de datos es un reporte de accidentes, sin embargo, puede ser considerado el accidente por si mismo peligroso o necesita haber  lesiados y/o muertos para que sea condiserado peligroso?
+
+```{r stret-reports}
+temp_tbl <- table(sub_df$Calle)
+temp_df <- as.data.frame(temp_tbl)
+temp_df <- temp_df %>% arrange(desc(temp_df$Freq))
+head(temp_df, 10)
+```
+Podemos ver que las calles con frecuencia mas reportadas ordenadas de manera descendente  son
+* LEONES
+* GARZA SADA
+* LINCOLN
+* MADERO
+* BERNARDO REYES
+
+Las demas calles solo presentan un reporte en el conjunto de datos.
+
+
+Veamos si hay reportes de lesionados y/o muertos.
+
+```{r negate-in}
+`%notin%` <- Negate(`%in%`)
+```
+
+```{r if-injury}
+sub_df %>% select("Calle", "Lesionados", "Muertos", "Causa") %>% filter(Lesionados %notin% c("No") | Muertos %notin% c("No"))
+```
+
+Entre las malas noticias la buena, no hay muertos. Dentro de los reportes solo una calle aparece con un reporte de un Lesionado en la Calle SAN LORENZO, que dentro de las mas reportadas solo se encuentra con un reporte. 
+
+# 2. ¿Cuál es el grupo de edad con el mayor número total de colisiones reportadas? Puede considerar cualquier grupo de edad a los fines de esta pregunta. Explique esto de manera gráfica.
+
+
